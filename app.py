@@ -1,6 +1,4 @@
-
 # coding: utf-8
-
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier 
@@ -10,7 +8,11 @@ import pickle
 
 app = Flask("__name__")
 
-df_1=pd.read_csv("first_telc.csv")
+try:
+    df_1 = pd.read_csv("first_telc.csv")
+except FileNotFoundError:
+    print("Error: first_telc.csv not found. Please ensure the file exists.")
+    df_1 = pd.DataFrame()  # Create an empty DataFrame to avoid errors
 
 q = ""
 
@@ -18,10 +20,8 @@ q = ""
 def loadPage():
 	return render_template('home.html', query="")
 
-
 @app.route("/", methods=['POST'])
 def predict():
-    
     '''
     SeniorCitizen
     MonthlyCharges
@@ -43,9 +43,6 @@ def predict():
     PaymentMethod
     tenure
     '''
-    
-
-    
     inputQuery1 = request.form['query1']
     inputQuery2 = request.form['query2']
     inputQuery3 = request.form['query3']
@@ -66,7 +63,12 @@ def predict():
     inputQuery18 = request.form['query18']
     inputQuery19 = request.form['query19']
 
-    model = pickle.load(open("model.sav", "rb"))
+    try:
+        with open("model.sav", "rb") as f:
+            model = pickle.load(f)
+    except FileNotFoundError:
+        print("Error: model.sav not found. Ensure the model file exists.")
+        model = None  # Set to None to prevent crashes
     
     data = [[inputQuery1, inputQuery2, inputQuery3, inputQuery4, inputQuery5, inputQuery6, inputQuery7, 
              inputQuery8, inputQuery9, inputQuery10, inputQuery11, inputQuery12, inputQuery13, inputQuery14,
@@ -86,17 +88,12 @@ def predict():
     #drop column customerID and tenure
     df_2.drop(columns= ['tenure'], axis=1, inplace=True)   
     
-    
-    
-    
     new_df__dummies = pd.get_dummies(df_2[['gender', 'SeniorCitizen', 'Partner', 'Dependents', 'PhoneService',
            'MultipleLines', 'InternetService', 'OnlineSecurity', 'OnlineBackup',
            'DeviceProtection', 'TechSupport', 'StreamingTV', 'StreamingMovies',
            'Contract', 'PaperlessBilling', 'PaymentMethod','tenure_group']])
     
-    
     #final_df=pd.concat([new_df__dummies, new_dummy], axis=1)
-        
     
     single = model.predict(new_df__dummies.tail(1))
     probablity = model.predict_proba(new_df__dummies.tail(1))[:,1]
@@ -129,5 +126,5 @@ def predict():
                            query18 = request.form['query18'], 
                            query19 = request.form['query19'])
     
-app.run()
-
+if __name__ == "__main__":
+    app.run(debug=True)  # Set debug=False in production
